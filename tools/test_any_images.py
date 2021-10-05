@@ -1,3 +1,4 @@
+import math
 import os
 import cv2
 import torch
@@ -13,6 +14,7 @@ from lib.models.image_transfer import bins_to_depth
 
 logger = setup_logging(__name__)
 
+# --dataroot    ../images/	--dataset     any  --cfg_file     lib/configs/resnext101_32x4d_nyudv2_class --load_ckpt   ./kitti_official.pth
 
 def scale_torch(img, scale):
     """
@@ -50,7 +52,7 @@ if __name__ == '__main__':
     model.cuda()
     model = torch.nn.DataParallel(model)
 
-    path = os.path.join(cfg.ROOT_DIR, './test_any_imgs_examples') # the dir of imgs
+    path = os.path.join(cfg.ROOT_DIR, '../images')  # the dir of imgs
     imgs_list = os.listdir(path)
     for i in imgs_list:
         print(i)
@@ -58,11 +60,16 @@ if __name__ == '__main__':
             img = cv2.imread(os.path.join(path, i))
             img_resize = cv2.resize(img, (int(img.shape[1]), int(img.shape[0])), interpolation=cv2.INTER_LINEAR)
             img_torch = scale_torch(img_resize, 255)
-            img_torch = img_torch[None, :, :, :].cuda()
 
-            _, pred_depth_softmax= model.module.depth_model(img_torch)
+            img_torch = img_torch[None, :, :, :].cuda()
+            _, pred_depth_softmax = model.module.depth_model(img_torch)
             pred_depth = bins_to_depth(pred_depth_softmax)
             pred_depth = pred_depth.cpu().numpy().squeeze()
             pred_depth_scale = (pred_depth / pred_depth.max() * 60000).astype(np.uint16)  # scale 60000 for visualization
+            pred_depth_kp = ((pred_depth - pred_depth.min()) / (pred_depth.max() - pred_depth.min())) * (255 - 0) + 0
+
+            print(pred_depth_kp.max())
+            print(pred_depth_kp.min())
 
             cv2.imwrite(os.path.join(path, i.split('.')[0] + '-raw.png'), pred_depth_scale)
+            cv2.imwrite(os.path.join(path, i.split('.')[0] + '-me.png'), pred_depth_kp)
