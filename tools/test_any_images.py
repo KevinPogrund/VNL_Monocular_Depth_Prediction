@@ -14,7 +14,6 @@ from lib.models.image_transfer import bins_to_depth
 
 logger = setup_logging(__name__)
 
-# --dataroot    ../images/	--dataset     any  --cfg_file     lib/configs/resnext101_32x4d_nyudv2_class --load_ckpt   ./kitti_official.pth
 
 def scale_torch(img, scale):
     """
@@ -66,10 +65,8 @@ if __name__ == '__main__':
             pred_depth = bins_to_depth(pred_depth_softmax)
             pred_depth = pred_depth.cpu().numpy().squeeze()
             pred_depth_scale = (pred_depth / pred_depth.max() * 60000).astype(np.uint16)  # scale 60000 for visualization
-            pred_depth_kp = ((pred_depth - pred_depth.min()) / (pred_depth.max() - pred_depth.min())) * (255 - 0) + 0
 
-            print(pred_depth_kp.max())
-            print(pred_depth_kp.min())
-
+            pred_depth_kp = ((pred_depth - pred_depth.min()) / (pred_depth.max() - pred_depth.min())) * (256 - 0) + 0
+            # an attempt to bring the images into an acceptable rangge to produce a visual output (gives a grainy output)
             cv2.imwrite(os.path.join(path, i.split('.')[0] + '-raw.png'), pred_depth_scale)
             cv2.imwrite(os.path.join(path, i.split('.')[0] + '-me.png'), pred_depth_kp)
